@@ -4,6 +4,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView, FormView
+from django.views.generic.list import ListView
+
+from courses.models import Course
 
 from .forms import CourseEnrollForm
 
@@ -45,3 +48,40 @@ class StudentEnrollCourseView(LoginRequiredMixin, FormView):
             'student_course_detail',
             args=[self.course.id]
         )
+
+
+class StudentCourseListView(LoginRequiredMixin, ListView):
+    model = Course
+    template_name = 'students/course/list.html'
+
+    def get_queryset(self):
+        qs = super(StudentCourseListView, self).get_queryset()
+        return qs.filter(students__in=[self.request.user])
+
+
+from django.views.generic.detail import DetailView
+
+class StudentCourseDetailView(DetailView):
+    model = Course
+    template_name = 'students/course/detail.html'
+
+    def get_queryset(self):
+        qs = super(StudentCourseDetailView, self).get_queryset()
+        return qs.filter(students__in=[self.request.user])
+
+    def get_context_data(self, **kwargs):
+        context = super(
+            StudentCourseDetailView,
+            self
+        ).get_context_data(**kwargs)
+
+        course = self.get_object()
+
+        if 'module_id' in self.kwargs:
+            context['module'] = course.modules.get(
+                id=self.kwargs['module_id']
+            )
+        else:
+            context['module'] = course.module.all()[0]
+
+        return context
